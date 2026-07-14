@@ -128,12 +128,18 @@ func NewAdmission(kubeClientConfig *restclient.Config, stopCh <-chan struct{}, c
 		return
 	}
 
+	// ResourceOverride dynamic informer (AUTOSCALE-867).
+	// Uses a filtered dynamic shared informer factory; soft-fails to nil lister when
+	// the CRD is not installed so admission falls back to ClusterResourceOverride only.
+	roLister := NewResourceOverrideListerOrNil(kubeClientConfig, stopCh)
+
 	admission = &clusterResourceOverrideAdmission{
 		config:   config,
 		nsLister: namespaces.Lister(),
 		limitQuerier: &namespaceLimitQuerier{
 			limitRangesLister: limitRanges.Lister(),
 		},
+		roLister: roLister,
 	}
 
 	return
@@ -167,6 +173,7 @@ type clusterResourceOverrideAdmission struct {
 	config       *Config
 	nsLister     corev1listers.NamespaceLister
 	limitQuerier *namespaceLimitQuerier
+	roLister     ResourceOverrideLister
 }
 
 func (p *clusterResourceOverrideAdmission) GetConfiguration() *Config {
