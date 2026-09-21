@@ -1,0 +1,10 @@
+FROM registry.access.redhat.com/ubi9/go-toolset:1.22 AS builder
+USER root
+WORKDIR /go/src/github.com/openshift/cluster-resource-override-admission
+COPY . .
+RUN GOARCH=s390x GOOS=linux GOFLAGS=-mod=vendor make build
+
+FROM registry.access.redhat.com/ubi9-minimal:9.8
+COPY --from=builder /go/src/github.com/openshift/cluster-resource-override-admission/bin/cluster-resource-override-admission /usr/bin/
+ADD artifacts/configuration.yaml /etc/clusterresourceoverride/config/override.yaml
+ENV CONFIGURATION_PATH=/etc/clusterresourceoverride/config/override.yaml
